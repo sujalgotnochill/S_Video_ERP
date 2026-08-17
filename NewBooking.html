@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <?!= include('Styles'); ?>
+</head>
+
+<body>
+
+<h2>📋 New Booking</h2>
+
+<form id="bookingForm">
+
+<div class="card">
+
+  <div class="row">
+
+    <div class="col">
+      <label>Booking Date</label>
+      <input
+        type="date"
+        id="bookingDate">
+    </div>
+
+    <div class="col">
+      <label>Delivery Date</label>
+      <input
+        type="date"
+        id="deliveryDate">
+    </div>
+
+  </div>
+
+  <div class="row">
+
+    <div class="col">
+
+      <div class="checkbox-group">
+
+          <label>
+              <input
+                  type="checkbox"
+                  id="oneTimeCustomer"
+                  onchange="toggleOneTimeCustomer()">
+              One-time Customer
+          </label>
+
+      </div>
+
+      <label id="studioLabel">Studio</label>
+
+      <div class="search-box">
+
+        <input
+          type="text"
+          id="studioSearch"
+          placeholder="Search Studio..."
+          autocomplete="off">
+
+        <div
+          id="studioSuggestions"
+          class="suggestions">
+        </div>
+
+        <div id="oneTimeDiv" style="display:none; margin-top:10px;">
+            <label>Customer / Studio Name</label>
+            <input
+                type="text"
+                id="oneTimeStudioName"
+                placeholder="Enter customer or studio name">
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="row">
+
+    <div class="col">
+
+    <label>Studio Mobile</label>
+
+    <input
+      type="tel"
+      id="mobile"
+      readonly>
+
+    </div>
+
+  </div>
+
+  <div class="row">
+
+    <div class="col">
+
+      <label>Job Title</label>
+
+      <input
+        type="text"
+        id="jobTitle"
+        placeholder="Wedding / Reception / Birthday">
+
+    </div>
+
+    <div class="col">
+
+      <label>Service</label>
+
+      <div class="search-box">
+
+        <input
+          type="text"
+          id="serviceSearch"
+          placeholder="Search Service..."
+          autocomplete="off">
+
+        <div
+          id="serviceSuggestions"
+          class="suggestions">
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="card">
+
+  <div class="row">
+
+    <div class="col">
+
+      <label>Song Preference</label>
+
+      <select id="songPreference"></select>
+
+    </div>
+
+    <div class="col">
+
+      <label>Effects</label>
+
+      <select id="effects"></select>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="card">
+
+  <label>Media Received</label>
+
+  <div class="checkbox-group">
+
+    <label>
+      <input
+        type="checkbox"
+        id="pendrive">
+      Pendrive
+    </label>
+
+    <label>
+      <input
+        type="checkbox"
+        id="harddisk">
+      Hard Disk
+    </label>
+
+    <label>
+      <input
+        type="checkbox"
+        id="memorycard">
+      Memory Card
+    </label>
+
+  </div>
+
+  <hr>
+
+  <label>
+
+    <input
+      type="checkbox"
+      id="drone">
+
+    Drone Footage
+
+  </label>
+
+</div>
+
+<div class="card">
+
+  <div class="row">
+
+    <div class="col">
+
+      <label>Advance Paid</label>
+
+      <input
+        type="number"
+        id="advancePaid"
+        value="0"
+        min="0">
+
+    </div>
+
+  </div>
+
+  <label>Remarks</label>
+
+  <textarea
+    id="remarks"
+    rows="4"></textarea>
+
+</div>
+
+<button
+  id="saveBtn"
+  type="button"
+  onclick="saveBooking()">
+
+  Save Booking
+
+</button>
+
+</form>
+
+<script>
+
+const editMode = <?= editMode ? "true" : "false" ?>;
+
+const booking = <?= booking ? JSON.stringify(booking) : "null" ?>;
+
+let studios = [];
+let services = [];
+let lists = {};
+
+let selectedStudio = null;
+let selectedService = null;
+let activeSuggestionIndex = -1;
+let debounceTimer = null;
+window.onload = function () {
+
+  google.script.run
+    .withSuccessHandler(initializeForm)
+    .withFailureHandler(showError)
+    .getBookingFormData();
+
+};
+
+function initializeForm(data) {
+
+  studios = data.studios || [];
+  services = data.services || [];
+  lists = data.lists || {};
+
+  populateDropdown(
+    "songPreference",
+    lists.songPreference || []
+  );
+
+  populateDropdown(
+    "effects",
+    lists.effects || []
+  );
+
+  document.getElementById("bookingDate").value =
+    data.today;
+
+  initializeStudioSearch();
+
+  initializeServiceSearch();
+
+  if (editMode && booking) {
+
+    fillBookingData();
+
+  }
+
+}
+
+function fillBookingData() {
+
+  document.getElementById("bookingDate").value =
+    booking.bookingDate || "";
+
+  document.getElementById("deliveryDate").value =
+    booking.deliveryDate || "";
+
+  document.getElementById("jobTitle").value =
+    booking.jobTitle || "";
+
+  document.getElementById("mobile").value =
+    booking.mobileNumber || "";
+
+  document.getElementById("remarks").value =
+    booking.remarks || "";
+
+  document.getElementById("advancePaid").value =
+    booking.advance || 0;
+
+  document.getElementById("songPreference").value =
+    booking.songPreference || "";
+
+  document.getElementById("effects").value =
+    booking.effects || "";
+
+  document.getElementById("drone").checked =
+    booking.drone;
+
+  document.getElementById("pendrive").checked =
+    booking.pendrive;
+
+  document.getElementById("harddisk").checked =
+    booking.hardDisk;
+
+  document.getElementById("memorycard").checked =
+    booking.memoryCard;
+
+  // Studio
+
+  selectedStudio =
+    studios.find(s => s.id === booking.studioId) || null;
+
+  if (selectedStudio) {
+
+    document.getElementById("studioSearch").value =
+      selectedStudio.displayName || selectedStudio.name;
+
+  }
+
+  // Service
+
+  selectedService =
+    services.find(s => s.name === booking.serviceName) || null;
+
+  if (selectedService) {
+
+    document.getElementById("serviceSearch").value =
+      booking.serviceName || "";
+
+  }
+
+}
+
+function populateDropdown(id, values) {
+
+  const select =
+    document.getElementById(id);
+
+  select.innerHTML = "";
+
+  const first =
+    document.createElement("option");
+
+  first.value = "";
+  first.textContent = "Select";
+
+  select.appendChild(first);
+
+  values.forEach(value => {
+
+    const option =
+      document.createElement("option");
+
+    option.value = value;
+    option.textContent = value;
+
+    select.appendChild(option);
+
+  });
+
+}
+function initializeStudioSearch() {
+
+  setupSearch(
+
+    "studioSearch",
+
+    "studioSuggestions",
+
+    studios,
+
+    function (studio) {
+
+      return (
+        (studio.id || "") + " " +
+        (studio.name || "") + " " +
+        (studio.displayName || "")
+        ).toLowerCase();
+
+    },
+
+    function (studio) {
+
+      return studio.displayName || studio.name;
+
+    },
+
+    function (studio) {
+
+      selectedStudio = studio;
+
+      document.getElementById("mobile").value =
+        studio.mobile || "";
+
+    }
+
+  );
+
+}
+
+function initializeServiceSearch() {
+
+  setupSearch(
+
+    "serviceSearch",
+
+    "serviceSuggestions",
+
+    services,
+
+    function (service) {
+
+      return (
+        (service.id || "") + " " +
+        (service.name || "")
+      ).toLowerCase();
+
+    },
+
+    function (service) {
+
+      return service.name;
+
+    },
+
+    function (service) {
+
+      selectedService = service;
+
+    }
+
+  );
+
+}
+
+function setupSearch(
+  inputId,
+  suggestionId,
+  items,
+  searchFunction,
+  displayFunction,
+  selectFunction
+) {
+
+  const input = document.getElementById(inputId);
+  const suggestions = document.getElementById(suggestionId);
+
+  input.addEventListener("focus", function () {
+
+  if (items.length) {
+
+    render(items, "");
+
+  }
+
+  });
+
+  function hideSuggestions() {
+    suggestions.style.display = "none";
+    activeSuggestionIndex = -1;
+  }
+
+  function render(results, keyword) {
+
+    suggestions.innerHTML = "";
+
+    if (!results.length) {
+
+      suggestions.innerHTML =
+        '<div class="no-result">No results found</div>';
+
+      suggestions.style.display = "block";
+
+      return;
+
+    }
+
+    results.forEach((item, index) => {
+
+      const div = document.createElement("div");
+
+      div.className = "suggestion-item";
+
+      const text = displayFunction(item);
+
+      if (keyword) {
+
+        const regex = new RegExp("(" + keyword + ")", "ig");
+
+        div.innerHTML = text.replace(regex, "<b>$1</b>");
+
+      } else {
+
+        div.textContent = text;
+
+      }
+
+      div.onclick = function () {
+
+        input.value = displayFunction(item);
+
+        selectFunction(item);
+
+        hideSuggestions();
+
+      };
+
+      suggestions.appendChild(div);
+
+    });
+
+    suggestions.style.display = "block";
+
+
+  }
+
+  input.addEventListener("input", function () {
+
+    clearTimeout(debounceTimer);
+
+    if (inputId === "studioSearch") {
+
+      selectedStudio = null;
+
+      document.getElementById("mobile").value = "";
+
+    }
+
+    if (inputId === "serviceSearch")
+      selectedService = null;
+
+    debounceTimer = setTimeout(function () {
+
+      const keyword =
+        input.value.trim().toLowerCase();
+
+      if (!keyword) {
+
+        hideSuggestions();
+
+        return;
+
+      }
+
+      const exact = [];
+      const starts = [];
+      const contains = [];
+
+      items.forEach(item => {
+
+        const text =
+          searchFunction(item);
+
+        if (text === keyword) {
+
+          exact.push(item);
+
+        } else if (text.startsWith(keyword)) {
+
+          starts.push(item);
+
+        } else if (text.includes(keyword)) {
+
+          contains.push(item);
+
+        }
+
+      });
+
+      render(
+        [...exact, ...starts, ...contains],
+        keyword
+      );
+
+    }, 150);
+
+  });
+
+  input.addEventListener("keydown", function (e) {
+
+    const list =
+      suggestions.querySelectorAll(".suggestion-item");
+
+    if (!list.length)
+      return;
+
+    if (e.key === "ArrowDown") {
+
+      e.preventDefault();
+
+      activeSuggestionIndex++;
+
+      if (activeSuggestionIndex >= list.length)
+        activeSuggestionIndex = 0;
+
+    }
+
+    else if (e.key === "ArrowUp") {
+
+      e.preventDefault();
+
+      activeSuggestionIndex--;
+
+      if (activeSuggestionIndex < 0)
+        activeSuggestionIndex = list.length - 1;
+
+    }
+
+    else if (e.key === "Enter") {
+
+      if (activeSuggestionIndex >= 0) {
+
+        e.preventDefault();
+
+        list[activeSuggestionIndex].click();
+
+      }
+
+      return;
+
+    }
+
+    else if (e.key === "Escape") {
+
+      hideSuggestions();
+
+      return;
+
+    }
+
+    list.forEach(el =>
+      el.classList.remove("active")
+    );
+
+    if (activeSuggestionIndex >= 0) {
+
+      list[activeSuggestionIndex]
+        .classList.add("active");
+
+      list[activeSuggestionIndex]
+        .scrollIntoView({
+          block: "nearest"
+        });
+
+    }
+
+  });
+
+  input.addEventListener("blur", function () {
+
+    setTimeout(function () {
+
+      const value =
+        input.value.trim().toLowerCase();
+
+      const exactMatch =
+        items.find(item =>
+          displayFunction(item)
+            .toLowerCase() === value
+        );
+
+      if (exactMatch) {
+
+        selectFunction(exactMatch);
+
+        input.value =
+          displayFunction(exactMatch);
+
+      }
+
+      hideSuggestions();
+
+    }, 150);
+
+  });
+
+}
+
+document.addEventListener(
+
+  "click",
+
+  function (event) {
+
+    if (!event.target.closest(".search-box")) {
+
+      document
+        .querySelectorAll(".suggestions")
+        .forEach(function (box) {
+
+          box.style.display = "none";
+
+        });
+
+    }
+
+  }
+
+);
+
+function validateForm() {
+
+  const mobile =
+      document.getElementById("mobile").value.trim();
+
+  if (!mobile) {
+      alert("Please enter Mobile Number.");
+      return false;
+  }
+
+  if (!document.getElementById("bookingDate").value) {
+
+    alert("Booking Date is required.");
+
+    return false;
+
+  }
+
+  const oneTime = document.getElementById("oneTimeCustomer").checked;
+
+  if (!oneTime && !selectedStudio) {
+    alert("Please select a Studio.");
+    return false;
+  }
+
+  if (oneTime &&
+      !document.getElementById("oneTimeStudioName").value.trim()) {
+    alert("Please enter Customer / Studio Name.");
+    return false;
+  }
+
+
+  if (!selectedService) {
+
+    alert("Please select a Service.");
+
+    return false;
+
+  }
+
+
+  return true;
+
+}
+
+function saveBooking() {
+
+  if (!validateForm()) return;
+
+  const saveButton =
+    document.getElementById("saveBtn");
+
+  saveButton.disabled = true;
+
+  saveButton.textContent = "Saving...";
+
+  const formData = {
+
+    row: editMode ? booking.row : null,
+
+    bookingNo: editMode ? booking.bookingNo : null,
+
+    bookingDate:
+      document.getElementById("bookingDate").value,
+
+    deliveryDate:
+      document.getElementById("deliveryDate").value,
+
+    studioId: document.getElementById("oneTimeCustomer").checked
+      ? ""
+      : selectedStudio.id,
+
+    studioName: document.getElementById("oneTimeCustomer").checked
+      ? document.getElementById("oneTimeStudioName").value.trim()
+      : (selectedStudio.displayName || selectedStudio.name),
+
+    mobileNumber:
+      document.getElementById("mobile").value.trim(),
+
+    jobTitle:
+      document.getElementById("jobTitle").value.trim(),
+
+    serviceId:
+      selectedService.id,
+
+    songPreference:
+      document.getElementById("songPreference").value,
+
+    effects:
+      document.getElementById("effects").value,
+
+    droneFootage:
+      document.getElementById("drone").checked,
+
+    pendrive:
+      document.getElementById("pendrive").checked,
+
+    hardDisk:
+      document.getElementById("harddisk").checked,
+
+    memoryCard:
+      document.getElementById("memorycard").checked,
+
+    advancePaid:
+      Number(
+        document.getElementById("advancePaid").value
+      ) || 0,
+
+    remarks:
+      document.getElementById("remarks").value.trim()
+
+  };
+
+  
+
+    const runner = google.script.run
+
+        .withSuccessHandler(function(result) {
+
+            alert(
+                editMode
+                    ? "Booking updated successfully."
+                    : `Booking #${result.bookingNo} saved successfully.`
+            );
+
+            google.script.host.close();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+            saveButton.disabled = false;
+
+            saveButton.textContent = "Save Booking";
+
+            showError(error);
+
+        });
+
+    if (editMode) {
+
+        runner.updateBooking(formData);
+
+    } else {
+
+        runner.submitBooking(formData);
+
+    }
+
+}
+
+function showError(error) {
+
+  const message =
+    error && error.message
+      ? error.message
+      : String(error);
+
+  alert(message);
+
+}
+document.querySelectorAll('input[type="text"], textarea').forEach(function(el) {
+
+  el.addEventListener("input", function() {
+
+    const start = this.selectionStart;
+    const end = this.selectionEnd;
+
+    this.value = this.value.toUpperCase();
+
+    this.setSelectionRange(start, end);
+
+  });
+
+});
+
+function toggleOneTimeCustomer() {
+
+    const checked =
+        document.getElementById("oneTimeCustomer").checked;
+
+    const studioSearch =
+        document.getElementById("studioSearch");
+
+    const mobile =
+        document.getElementById("mobile");
+
+    const label =
+        document.getElementById("studioLabel");
+
+    studioSearch.disabled = checked;
+
+    document.getElementById("studioSuggestions").style.display = "none";
+
+    document.getElementById("oneTimeDiv").style.display =
+        checked ? "block" : "none";
+
+    if (checked) {
+
+        label.textContent = "Customer / Studio";
+
+        selectedStudio = null;
+
+        studioSearch.value = "";
+
+        mobile.readOnly = false;
+        mobile.value = "";
+        mobile.focus();
+
+    } else {
+
+        label.textContent = "Studio";
+
+        document.getElementById("oneTimeStudioName").value = "";
+
+        mobile.readOnly = true;
+        mobile.value = "";
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>
