@@ -2,85 +2,86 @@
 <html>
 
 <head>
-
 <base target="_top">
-
 <?!= include("Styles"); ?>
 
 <style>
-
-body{
-    padding:20px;
-    font-family:Arial,sans-serif;
-    background:#f5f7fb;
+body {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #f5f7fb;
 }
 
-.toolbar{
-    margin-bottom:20px;
+.toolbar {
+    margin-bottom: 20px;
 }
 
-.toolbar input{
-    width:100%;
-    padding:12px;
-    font-size:15px;
-    border:1px solid #ccc;
-    border-radius:8px;
+.toolbar input {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    background:#fff;
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
 }
 
-th{
-    background:#2563eb;
-    color:#fff;
-    padding:12px;
-    text-align:left;
+th {
+    background: #2563eb;
+    color: #fff;
+    padding: 12px;
+    text-align: left;
 }
 
-td{
-    padding:10px;
-    border-bottom:1px solid #e5e7eb;
+td {
+    padding: 10px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
-tr:hover{
-    background:#f8fafc;
+tr:hover {
+    background: #f8fafc;
 }
 
-.status{
-    padding:4px 10px;
-    border-radius:15px;
-    font-size:12px;
-    font-weight:bold;
+.status {
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: bold;
+    display: inline-block;
 }
 
-.pending{
-    background:#FEF3C7;
-    color:#92400E;
+.status-pending {
+    background: #FEF3C7;
+    color: #92400E;
 }
 
-.completed{
-    background:#D1FAE5;
-    color:#065F46;
+.status-completed {
+    background: #D1FAE5;
+    color: #065F46;
 }
 
-.edit-btn{
-    background:#2563EB;
-    color:white;
-    border:none;
-    padding:8px 14px;
-    border-radius:6px;
-    cursor:pointer;
+.status-default {
+    background: #E5E7EB;
+    color: #374151;
 }
 
-.edit-btn:hover{
-    background:#1D4ED8;
+.edit-btn {
+    background: #2563EB;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
+.edit-btn:hover {
+    background: #1D4ED8;
+}
 </style>
-
 </head>
 
 <body>
@@ -88,165 +89,97 @@ tr:hover{
 <h2>Booking Search</h2>
 
 <div class="toolbar">
-
-<input
-type="text"
-id="searchBox"
-placeholder="Search Booking No, Studio, Mobile, Job Title..."
->
-
+  <input type="text" id="searchBox" placeholder="Search Booking No, Studio, Mobile, Job Title...">
 </div>
 
 <table>
-
 <thead>
-
 <tr>
-
-<th>Booking No</th>
-<th>Booking Date</th>
-<th>Delivery</th>
-<th>Studio</th>
-<th>Mobile</th>
-<th>Job</th>
-<th>Service</th>
-<th>Status</th>
-<th>Edit</th>
-
+  <th>Booking No</th>
+  <th>Booking Date</th>
+  <th>Delivery</th>
+  <th>Studio</th>
+  <th>Mobile</th>
+  <th>Job</th>
+  <th>Service</th>
+  <th>Status</th>
+  <th>Edit</th>
 </tr>
-
 </thead>
 
 <tbody id="bookingTable">
-
-<tr>
-
-<td colspan="9" style="text-align:center;">
-Loading...
-</td>
-
-</tr>
-
+  <tr>
+    <td colspan="9" style="text-align:center;">Loading...</td>
+  </tr>
 </tbody>
-
 </table>
 
 <script>
-
-let bookings = [];
+let searchDebounceTimer = null;
 
 window.onload = function () {
-
     loadBookings("");
 
-    document
-        .getElementById("searchBox")
-        .addEventListener("input", function () {
-
-            loadBookings(this.value);
-
-        });
-
+    document.getElementById("searchBox").addEventListener("input", function () {
+        clearTimeout(searchDebounceTimer);
+        const val = this.value;
+        searchDebounceTimer = setTimeout(function () {
+            loadBookings(val);
+        }, 200);
+    });
 };
 
 function loadBookings(keyword) {
-
     google.script.run
-
         .withSuccessHandler(function(result){
-
-            bookings = result || [];
-
-            renderBookings();
-
+            renderBookings(result || []);
         })
-
         .withFailureHandler(function(err){
-
             alert(err.message || err);
-
         })
-
         .searchBookingRecords(keyword);
-
 }
 
-function renderBookings() {
-
-
-    const tbody =
-        document.getElementById("bookingTable");
-
+function renderBookings(bookings) {
+    const tbody = document.getElementById("bookingTable");
     tbody.innerHTML = "";
 
-    if (bookings.length === 0) {
-
-        tbody.innerHTML =
-        "<tr><td colspan='9' style='text-align:center;'>No bookings found.</td></tr>";
-
+    if (!bookings.length) {
+        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>No bookings found.</td></tr>";
         return;
-
     }
 
     bookings.forEach(function(booking){
+        const tr = document.createElement("tr");
+        const statusText = booking.status || "Pending";
+        let statusClass = "status-default";
 
-        const tr =
-            document.createElement("tr");
+        if (statusText.toLowerCase() === "pending") statusClass = "status-pending";
+        if (statusText.toLowerCase() === "completed") statusClass = "status-completed";
 
         tr.innerHTML = `
-
             <td>${booking.bookingNo}</td>
-
             <td>${booking.bookingDate || ""}</td>
-
             <td>${booking.deliveryDate || ""}</td>
-
             <td>${booking.studioName || ""}</td>
-
             <td>${booking.mobileNumber || ""}</td>
-
             <td>${booking.jobTitle || ""}</td>
-
             <td>${booking.serviceName || ""}</td>
-
+            <td><span class="status ${statusClass}">${statusText}</span></td>
             <td>
-
-                <span class="status">
-
-                    ${booking.status || ""}
-
-                </span>
-
-            </td>
-
-            <td>
-
-                <button
-                    class="edit-btn"
-                    onclick="editBooking('${booking.bookingNo}')">
-
+                <button class="edit-btn" onclick="editBooking('${booking.bookingNo}')">
                     Edit
-
                 </button>
-
             </td>
-
         `;
-
         tbody.appendChild(tr);
-
     });
-
 }
 
 function editBooking(bookingNo){
-
     google.script.run.showEditBookingDialog(bookingNo);
-
 }
-
 </script>
 
 </body>
-
 </html>

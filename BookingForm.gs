@@ -2,165 +2,95 @@
  * S Video ERP
  * Module : Booking
  * File   : BookingForm.gs
- * Version: 2.0.0
- *
- * Responsibility:
- * Supplies data required by the Booking Form.
+ * Version: 2.2.0 (Display Names & QC)
  *************************************************/
 
-/*************************************************
- * Opens New Booking Dialog
- *************************************************/
 function showNewBookingDialog() {
-
-  const template =
-    HtmlService.createTemplateFromFile("NewBooking");
-
+  const template = HtmlService.createTemplateFromFile("NewBooking");
   template.editMode = false;
   template.booking = null;
 
-  SpreadsheetApp
-    .getUi()
-    .showModalDialog(
-      template
-        .evaluate()
-        .setWidth(
-          DIALOG.NEW_BOOKING.WIDTH
-        )
-        .setHeight(
-          DIALOG.NEW_BOOKING.HEIGHT
-        ),
-      "New Booking"
-    );
+  const width = (typeof DIALOG !== "undefined" && DIALOG.NEW_BOOKING) ? DIALOG.NEW_BOOKING.WIDTH : 650;
+  const height = (typeof DIALOG !== "undefined" && DIALOG.NEW_BOOKING) ? DIALOG.NEW_BOOKING.HEIGHT : 600;
 
+  SpreadsheetApp.getUi().showModalDialog(
+    template.evaluate().setWidth(width).setHeight(height),
+    "New Booking / Edit"
+  );
 }
 
-/*************************************************
- * Returns all Studios
- *************************************************/
 function getStudios() {
-
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName(
-      SHEETS.STUDIO
-    );
-
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Studio Master");
+  if (!sheet) return [];
   const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
 
-  if (lastRow < 2) {
-    return [];
-  }
-
-  return sheet
-    .getRange(2, 1, lastRow - 1, 8)
-    .getValues()
+  return sheet.getRange(2, 1, lastRow - 1, 8).getValues()
     .filter(row => row[0] && row[1])
-    .map(function(row){
-
-      return {
-
-        id: row[0],
-        name: row[1],
-        displayName: row[2],
-        owner: row[3],
-        mobile: row[4],
-        whatsapp: row[5],
-        city: row[6],
-        notes: row[7]
-
-      };
-
-    });
-
+    .map(row => ({
+      id: String(row[0] || ""),
+      name: String(row[1] || ""),
+      displayName: String(row[2] || (row[1] + " - " + row[3] + " - " + row[6])),
+      owner: String(row[3] || ""),
+      mobile: String(row[4] || ""),
+      whatsapp: String(row[5] || ""),
+      city: String(row[6] || ""),
+      notes: String(row[7] || "")
+    }));
 }
 
-/*************************************************
- * Returns all Services
- *************************************************/
 function getServices() {
-
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName(
-      SHEETS.SERVICE
-    );
-
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Services Master");
+  if (!sheet) return [];
   const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
 
-  if (lastRow < 2) {
-    return [];
-  }
-
-  return sheet
-    .getRange(2, 1, lastRow - 1, 6)
-    .getValues()
+  return sheet.getRange(2, 1, lastRow - 1, 6).getValues()
     .filter(row => row[0] && row[1])
-    .map(function(row){
-
-      return {
-
-        id: row[0],
-        name: row[1],
-        price: row[2],
-        category: row[3],
-        active: row[4],
-        notes: row[5]
-
-      };
-
-    });
-
+    .map(row => ({
+      id: String(row[0] || ""),
+      name: String(row[1] || ""),
+      price: Number(row[2]) || 0,
+      category: String(row[3] || ""),
+      active: Boolean(row[4]),
+      notes: String(row[5] || "")
+    }));
 }
 
-/*************************************************
- * Returns Booking Dropdown Lists
- *************************************************/
+function getStaff() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Staff Master");
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  // Fetch 3 columns so we can access Column C (Display Name)
+  return sheet.getRange(2, 1, lastRow - 1, 3).getValues()
+    .filter(row => row[0] && row[1])
+    .map(row => ({
+      id: String(row[0] || ""),
+      name: String(row[2] || row[1] || "") // Grabs Column C (Display Name), falls back to B if empty
+    }));
+}
+
 function getBookingLists() {
+  let songPref = [], fx = [], stat = [];
+  try { songPref = getList("Song Preference"); } catch (e) { songPref = ["STANDARD", "CUSTOM"]; }
+  try { fx = getList("Effects"); } catch (e) { fx = ["NORMAL", "CINEMATIC"]; }
+  try { stat = getList("Status"); } catch (e) { stat = ["Pending", "In Progress", "Completed", "Delivered"]; }
 
-  return {
-
-    songPreference:
-      getList("Song Preference"),
-
-    effects:
-      getList("Effects"),
-
-    status:
-      getList("Status")
-
-  };
-
+  return { songPreference: songPref, effects: fx, status: stat };
 }
 
-/*************************************************
- * Returns all data required by Booking Form
- *************************************************/
 function getBookingFormData() {
-
   return {
-
-    studios:
-      getStudios(),
-
-    services:
-      getServices(),
-
-    lists:
-      getBookingLists(),
-
-    today:
-      formatERPDate(new Date())
-
+    studios: getStudios(),
+    services: getServices(),
+    staff: getStaff(),
+    lists: getBookingLists(),
+    today: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd")
   };
-
 }
 
-/*************************************************
- * Creates New Booking
- *************************************************/
 function submitBooking(data) {
-
   return saveBooking(data);
-
 }

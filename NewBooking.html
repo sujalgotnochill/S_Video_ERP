@@ -1,948 +1,438 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <base target="_top">
   <?!= include('Styles'); ?>
+  <style>
+    /* UI UPGRADES & CSS FIXES */
+    
+    /* 1. Fix the broken checkboxes caused by global styles */
+    input[type="checkbox"] {
+      width: 16px !important;
+      height: 16px !important;
+      margin: 0 8px 0 0 !important;
+      display: inline-block !important;
+      cursor: pointer;
+      accent-color: #2563eb; /* Modern blue checkbox */
+    }
+
+    /* 2. Style the One-Time Customer as a nice highlighted pill */
+    .checkbox-container { 
+      display: inline-flex; 
+      align-items: center; 
+      background: #EFF6FF; 
+      border: 1px solid #BFDBFE;
+      padding: 8px 14px; 
+      border-radius: 20px; /* Pill shape */
+      color: #1E3A8A;
+      font-size: 13px; 
+      font-weight: 600; 
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.2s ease-in-out;
+    }
+    .checkbox-container:hover {
+      background: #DBEAFE;
+    }
+
+    /* 3. Neatly align the Media Received group */
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 5px;
+      background: #f9fafb;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      margin: 0;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    /* 4. General UI Polish */
+    .section-title { 
+      color: #2563EB; 
+      font-size: 16px; 
+      font-weight: bold;
+      margin-bottom: 15px; 
+      border-bottom: 2px solid #EFF6FF; 
+      padding-bottom: 8px; 
+    }
+    .card {
+      border: none;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      background: #ffffff;
+      padding: 20px;
+    }
+    .readonly-field { 
+      background-color: #F3F4F6; 
+      font-weight: bold; 
+      color: #374151;
+      border: 1px solid #D1D5DB;
+    }
+    .readonly-field:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    /* Search Dropdown Polish */
+    .search-container { position: relative; width: 100%; }
+    .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 9999; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.12); }
+    .suggestion-item { padding: 10px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
+    .suggestion-item:hover, .suggestion-item.active { background-color: #2563eb; color: #fff; }
+    .no-result { padding: 10px 12px; color: #6b7280; font-style: italic; font-size: 13px; }
+    
+    #headerTitle {
+      color: #1e293b;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+  </style>
 </head>
+<body style="background-color: #f8fafc; padding: 20px;">
 
-<body>
-
-<h2>📋 New Booking</h2>
+<h2 id="headerTitle">📋 Loading...</h2>
 
 <form id="bookingForm">
 
+<!-- Intake Card -->
 <div class="card">
-
+  <div class="section-title">📝 Intake Details</div>
   <div class="row">
-
-    <div class="col">
-      <label>Booking Date</label>
-      <input
-        type="date"
-        id="bookingDate">
-    </div>
-
-    <div class="col">
-      <label>Delivery Date</label>
-      <input
-        type="date"
-        id="deliveryDate">
-    </div>
-
+    <div class="col"><label>Booking Date</label><input type="date" id="bookingDate"></div>
+    <div class="col"><label>Delivery Date</label><input type="date" id="deliveryDate"></div>
   </div>
-
-  <div class="row">
-
+  
+  <div class="row" style="margin-top: 10px;">
     <div class="col">
-
-      <div class="checkbox-group">
-
-          <label>
-              <input
-                  type="checkbox"
-                  id="oneTimeCustomer"
-                  onchange="toggleOneTimeCustomer()">
-              One-time Customer
-          </label>
-
-      </div>
-
-      <label id="studioLabel">Studio</label>
-
-      <div class="search-box">
-
-        <input
-          type="text"
-          id="studioSearch"
-          placeholder="Search Studio..."
-          autocomplete="off">
-
-        <div
-          id="studioSuggestions"
-          class="suggestions">
+      <!-- Upgraded One-time Customer Toggle Pill -->
+      <label class="checkbox-container">
+        <input type="checkbox" id="oneTimeCustomer" onchange="toggleOneTimeCustomer()"> 
+        👤 One-time Customer
+      </label>
+      
+      <div id="studioSelectGroup">
+        <label>Select Studio</label>
+        <div class="search-container">
+          <input type="text" id="studioSearch" placeholder="🔍 Type Studio name, owner, or ID..." autocomplete="off">
+          <div id="studioSuggestions" class="suggestions"></div>
         </div>
-
-        <div id="oneTimeDiv" style="display:none; margin-top:10px;">
-            <label>Customer / Studio Name</label>
-            <input
-                type="text"
-                id="oneTimeStudioName"
-                placeholder="Enter customer or studio name">
-        </div>
-
       </div>
-
+      <div id="oneTimeGroup" style="display: none;">
+        <label>Customer / Studio Name <span style="color:red;">*</span></label>
+        <input type="text" id="oneTimeStudioName" placeholder="Enter customer or studio name">
+      </div>
     </div>
-
   </div>
 
   <div class="row">
-
-    <div class="col">
-
-    <label>Studio Mobile</label>
-
-    <input
-      type="tel"
-      id="mobile"
-      readonly>
-
-    </div>
-
+    <div class="col"><label>Studio / Customer Mobile</label><input type="tel" id="mobile" placeholder="📱 Mobile Number"></div>
   </div>
-
   <div class="row">
-
+    <div class="col"><label>Job Title</label><input type="text" id="jobTitle" placeholder="Wedding / Reception..."></div>
     <div class="col">
-
-      <label>Job Title</label>
-
-      <input
-        type="text"
-        id="jobTitle"
-        placeholder="Wedding / Reception / Birthday">
-
-    </div>
-
-    <div class="col">
-
       <label>Service</label>
-
-      <div class="search-box">
-
-        <input
-          type="text"
-          id="serviceSearch"
-          placeholder="Search Service..."
-          autocomplete="off">
-
-        <div
-          id="serviceSuggestions"
-          class="suggestions">
-        </div>
-
+      <div class="search-container">
+        <input type="text" id="serviceSearch" placeholder="🎬 Type or click to choose service..." autocomplete="off">
+        <div id="serviceSuggestions" class="suggestions"></div>
       </div>
-
     </div>
-
   </div>
-
 </div>
 
+<!-- Creative Rules Card -->
 <div class="card">
-
+  <div class="section-title">🎨 Creative Directions</div>
   <div class="row">
-
-    <div class="col">
-
-      <label>Song Preference</label>
-
-      <select id="songPreference"></select>
-
-    </div>
-
-    <div class="col">
-
-      <label>Effects</label>
-
-      <select id="effects"></select>
-
-    </div>
-
+    <div class="col"><label>Song Preference</label><select id="songPreference"></select></div>
+    <div class="col"><label>Effects</label><select id="effects"></select></div>
   </div>
-
-</div>
-
-<div class="card">
-
-  <label>Media Received</label>
-
+  
+  <label style="margin-top: 10px; display: block;">Media Received</label>
   <div class="checkbox-group">
-
-    <label>
-      <input
-        type="checkbox"
-        id="pendrive">
-      Pendrive
-    </label>
-
-    <label>
-      <input
-        type="checkbox"
-        id="harddisk">
-      Hard Disk
-    </label>
-
-    <label>
-      <input
-        type="checkbox"
-        id="memorycard">
-      Memory Card
-    </label>
-
+    <label><input type="checkbox" id="pendrive"> Pendrive</label>
+    <label><input type="checkbox" id="harddisk"> Hard Disk</label>
+    <label><input type="checkbox" id="memorycard"> Memory Card</label>
+    <label><input type="checkbox" id="drone"> 🚁 Drone Footage</label>
   </div>
-
-  <hr>
-
-  <label>
-
-    <input
-      type="checkbox"
-      id="drone">
-
-    Drone Footage
-
-  </label>
-
 </div>
 
-<div class="card">
+<!-- JOB PROCESSING & BILLING CARD -->
+<div class="card" id="processingCard">
+  <div class="section-title">⚙️ Job Processing & Billing</div>
+  
+  <div class="row">
+    <div class="col"><label>Status</label><select id="status"></select></div>
+    <div class="col"><label>Assigned Mixer</label><select id="assignedMixer"></select></div>
+  </div>
 
   <div class="row">
-
     <div class="col">
-
-      <label>Advance Paid</label>
-
-      <input
-        type="number"
-        id="advancePaid"
-        value="0"
-        min="0">
-
+      <label>Quantity</label>
+      <input type="number" id="quantity" placeholder="Leave blank until edited" oninput="calculateFinancials()">
     </div>
+    <div class="col">
+      <label>Advance Paid (₹)</label>
+      <input type="number" id="advancePaid" value="0" min="0" oninput="calculateFinancials()">
+    </div>
+  </div>
 
+  <div class="row">
+    <div class="col">
+      <label>Total Amount (₹)</label>
+      <input type="number" id="amount" class="readonly-field" readonly placeholder="Auto-calculated">
+    </div>
+    <div class="col">
+      <label>Balance Due (₹)</label>
+      <input type="number" id="balance" class="readonly-field" readonly style="color:#d32f2f;" placeholder="Auto-calculated">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <label>QC / Title</label>
+      <select id="qc"></select>
+    </div>
   </div>
 
   <label>Remarks</label>
-
-  <textarea
-    id="remarks"
-    rows="4"></textarea>
-
+  <textarea id="remarks" rows="2" placeholder="Optional notes..."></textarea>
 </div>
 
-<button
-  id="saveBtn"
-  type="button"
-  onclick="saveBooking()">
-
+<button id="saveBtn" type="button" onclick="saveBooking()" style="width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(37,99,235,0.2);">
   Save Booking
-
 </button>
 
 </form>
 
 <script>
+// BULLETPROOF LOGIC
+const EDIT_MODE_STR = "<?= editMode ?>";
+const IS_EDIT = (EDIT_MODE_STR === "true");
+const BOOKING_DATA = <?!= booking ? JSON.stringify(booking) : 'null' ?>;
 
-const editMode = <?= editMode ? "true" : "false" ?>;
+let studios = [], services = [], staff = [], lists = {};
+let selectedStudio = null, selectedService = null;
 
-const booking = <?= booking ? JSON.stringify(booking) : "null" ?>;
-
-let studios = [];
-let services = [];
-let lists = {};
-
-let selectedStudio = null;
-let selectedService = null;
-let activeSuggestionIndex = -1;
-let debounceTimer = null;
 window.onload = function () {
-
-  google.script.run
-    .withSuccessHandler(initializeForm)
-    .withFailureHandler(showError)
-    .getBookingFormData();
-
+  google.script.run.withSuccessHandler(initializeForm).withFailureHandler(showError).getBookingFormData();
 };
 
 function initializeForm(data) {
-
   studios = data.studios || [];
   services = data.services || [];
+  staff = data.staff || [];
   lists = data.lists || {};
 
-  populateDropdown(
-    "songPreference",
-    lists.songPreference || []
-  );
+  populateDropdown("songPreference", lists.songPreference || []);
+  populateDropdown("effects", lists.effects || []);
+  populateDropdown("status", lists.status || []);
 
-  populateDropdown(
-    "effects",
-    lists.effects || []
-  );
+  const mixerSelect = document.getElementById("assignedMixer");
+  const qcSelect = document.getElementById("qc");
+  
+  mixerSelect.innerHTML = '<option value="">Unassigned</option>';
+  qcSelect.innerHTML = '<option value="">Unassigned</option>';
+  
+  staff.forEach(s => {
+    const optMixer = document.createElement("option");
+    optMixer.value = s.name;
+    optMixer.textContent = s.name;
+    mixerSelect.appendChild(optMixer);
+    
+    const optQc = document.createElement("option");
+    optQc.value = s.name;
+    optQc.textContent = s.name;
+    qcSelect.appendChild(optQc);
+  });
 
-  document.getElementById("bookingDate").value =
-    data.today;
-
-  initializeStudioSearch();
-
-  initializeServiceSearch();
-
-  if (editMode && booking) {
-
-    fillBookingData();
-
+  if (!IS_EDIT) {
+    document.getElementById("headerTitle").innerText = "📋 New Booking";
+    document.getElementById("saveBtn").innerText = "Save Booking";
+    document.getElementById("bookingDate").value = data.today || new Date().toISOString().split('T')[0];
+    document.getElementById("status").value = "Pending";
+  } else {
+    document.getElementById("headerTitle").innerText = "📋 Edit Booking #" + (BOOKING_DATA ? BOOKING_DATA.bookingNo : "");
+    document.getElementById("saveBtn").innerText = "Update Booking";
   }
 
+  setupStudioSearch();
+  setupServiceSearch();
+
+  if (IS_EDIT && BOOKING_DATA) {
+    fillBookingData();
+  }
 }
 
 function fillBookingData() {
+  document.getElementById("bookingDate").value = BOOKING_DATA.bookingDate || "";
+  document.getElementById("deliveryDate").value = BOOKING_DATA.deliveryDate || "";
+  document.getElementById("jobTitle").value = BOOKING_DATA.jobTitle || "";
+  document.getElementById("mobile").value = BOOKING_DATA.mobileNumber || "";
+  document.getElementById("remarks").value = BOOKING_DATA.remarks || "";
+  
+  document.getElementById("advancePaid").value = BOOKING_DATA.advance !== undefined ? BOOKING_DATA.advance : 0;
+  
+  document.getElementById("songPreference").value = BOOKING_DATA.songPreference || "";
+  document.getElementById("effects").value = BOOKING_DATA.effects || "";
+  
+  document.getElementById("drone").checked = (BOOKING_DATA.drone === true || BOOKING_DATA.drone === "true");
+  document.getElementById("pendrive").checked = (BOOKING_DATA.pendrive === true || BOOKING_DATA.pendrive === "true");
+  document.getElementById("harddisk").checked = (BOOKING_DATA.hardDisk === true || BOOKING_DATA.hardDisk === "true");
+  document.getElementById("memorycard").checked = (BOOKING_DATA.memoryCard === true || BOOKING_DATA.memoryCard === "true");
+  
+  document.getElementById("status").value = BOOKING_DATA.status || "Pending";
+  document.getElementById("assignedMixer").value = BOOKING_DATA.assignedMixer || "";
+  
+  document.getElementById("quantity").value = (BOOKING_DATA.quantity === undefined || BOOKING_DATA.quantity === "") ? "" : BOOKING_DATA.quantity;
+  
+  document.getElementById("qc").value = BOOKING_DATA.qc || "";
+  
+  document.getElementById("amount").value = BOOKING_DATA.amount !== undefined ? BOOKING_DATA.amount : "";
+  document.getElementById("balance").value = BOOKING_DATA.balance !== undefined ? BOOKING_DATA.balance : "";
 
-  document.getElementById("bookingDate").value =
-    booking.bookingDate || "";
-
-  document.getElementById("deliveryDate").value =
-    booking.deliveryDate || "";
-
-  document.getElementById("jobTitle").value =
-    booking.jobTitle || "";
-
-  document.getElementById("mobile").value =
-    booking.mobileNumber || "";
-
-  document.getElementById("remarks").value =
-    booking.remarks || "";
-
-  document.getElementById("advancePaid").value =
-    booking.advance || 0;
-
-  document.getElementById("songPreference").value =
-    booking.songPreference || "";
-
-  document.getElementById("effects").value =
-    booking.effects || "";
-
-  document.getElementById("drone").checked =
-    booking.drone;
-
-  document.getElementById("pendrive").checked =
-    booking.pendrive;
-
-  document.getElementById("harddisk").checked =
-    booking.hardDisk;
-
-  document.getElementById("memorycard").checked =
-    booking.memoryCard;
-
-  // Studio
-
-  selectedStudio =
-    studios.find(s => s.id === booking.studioId) || null;
-
-  if (selectedStudio) {
-
-    document.getElementById("studioSearch").value =
-      selectedStudio.displayName || selectedStudio.name;
-
+  if (!BOOKING_DATA.studioId || String(BOOKING_DATA.studioId).trim() === "") {
+    document.getElementById("oneTimeCustomer").checked = true;
+    toggleOneTimeCustomer(); 
+    document.getElementById("oneTimeStudioName").value = BOOKING_DATA.studioName || "";
+  } else {
+    selectedStudio = studios.find(s => String(s.id) === String(BOOKING_DATA.studioId)) || null;
+    if (selectedStudio) {
+      document.getElementById("studioSearch").value = selectedStudio.displayName || selectedStudio.name;
+    }
   }
 
-  // Service
-
-  selectedService =
-    services.find(s => s.name === booking.serviceName) || null;
-
+  selectedService = services.find(s => s.name === BOOKING_DATA.serviceName) || null;
   if (selectedService) {
-
-    document.getElementById("serviceSearch").value =
-      booking.serviceName || "";
-
+    document.getElementById("serviceSearch").value = selectedService.name;
   }
-
 }
 
 function populateDropdown(id, values) {
-
-  const select =
-    document.getElementById(id);
-
-  select.innerHTML = "";
-
-  const first =
-    document.createElement("option");
-
-  first.value = "";
-  first.textContent = "Select";
-
-  select.appendChild(first);
-
-  values.forEach(value => {
-
-    const option =
-      document.createElement("option");
-
-    option.value = value;
-    option.textContent = value;
-
-    select.appendChild(option);
-
+  const select = document.getElementById(id);
+  select.innerHTML = '<option value="">Select</option>';
+  values.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v; opt.textContent = v;
+    select.appendChild(opt);
   });
-
 }
-function initializeStudioSearch() {
 
-  setupSearch(
-
-    "studioSearch",
-
-    "studioSuggestions",
-
-    studios,
-
-    function (studio) {
-
-      return (
-        (studio.id || "") + " " +
-        (studio.name || "") + " " +
-        (studio.displayName || "")
-        ).toLowerCase();
-
-    },
-
-    function (studio) {
-
-      return studio.displayName || studio.name;
-
-    },
-
-    function (studio) {
-
-      selectedStudio = studio;
-
-      document.getElementById("mobile").value =
-        studio.mobile || "";
-
-    }
-
+function setupStudioSearch() {
+  setupAutocomplete("studioSearch", "studioSuggestions", studios,
+    s => ((s.id || "") + " " + (s.name || "") + " " + (s.mobile || "")).toLowerCase(),
+    s => s.displayName || s.name,
+    s => { selectedStudio = s; document.getElementById("mobile").value = s.mobile || ""; }
   );
-
 }
 
-function initializeServiceSearch() {
-
-  setupSearch(
-
-    "serviceSearch",
-
-    "serviceSuggestions",
-
-    services,
-
-    function (service) {
-
-      return (
-        (service.id || "") + " " +
-        (service.name || "")
-      ).toLowerCase();
-
-    },
-
-    function (service) {
-
-      return service.name;
-
-    },
-
-    function (service) {
-
-      selectedService = service;
-
-    }
-
+function setupServiceSearch() {
+  setupAutocomplete("serviceSearch", "serviceSuggestions", services,
+    s => ((s.name || "") + " " + (s.category || "")).toLowerCase(),
+    s => s.name,
+    s => { selectedService = s; calculateFinancials(); }
   );
-
 }
 
-function setupSearch(
-  inputId,
-  suggestionId,
-  items,
-  searchFunction,
-  displayFunction,
-  selectFunction
-) {
-
-  const input = document.getElementById(inputId);
-  const suggestions = document.getElementById(suggestionId);
-
-  input.addEventListener("focus", function () {
-
-  if (items.length) {
-
-    render(items, "");
-
-  }
-
-  });
-
-  function hideSuggestions() {
-    suggestions.style.display = "none";
-    activeSuggestionIndex = -1;
-  }
-
-  function render(results, keyword) {
-
-    suggestions.innerHTML = "";
-
-    if (!results.length) {
-
-      suggestions.innerHTML =
-        '<div class="no-result">No results found</div>';
-
-      suggestions.style.display = "block";
-
-      return;
-
-    }
-
-    results.forEach((item, index) => {
-
-      const div = document.createElement("div");
-
-      div.className = "suggestion-item";
-
-      const text = displayFunction(item);
-
-      if (keyword) {
-
-        const regex = new RegExp("(" + keyword + ")", "ig");
-
-        div.innerHTML = text.replace(regex, "<b>$1</b>");
-
-      } else {
-
-        div.textContent = text;
-
-      }
-
-      div.onclick = function () {
-
-        input.value = displayFunction(item);
-
-        selectFunction(item);
-
-        hideSuggestions();
-
-      };
-
-      suggestions.appendChild(div);
-
+function setupAutocomplete(inputId, suggestionId, items, searchExtractor, displayExtractor, onSelectCallback) {
+  const input = document.getElementById(inputId), dropdown = document.getElementById(suggestionId);
+  function showList(keyword) {
+    dropdown.innerHTML = "";
+    const filtered = (keyword || "").trim() ? items.filter(i => searchExtractor(i).includes(keyword.toLowerCase())) : items;
+    if (!filtered.length) { dropdown.innerHTML = '<div class="no-result">No matches</div>'; dropdown.style.display = "block"; return; }
+    filtered.forEach(item => {
+      const div = document.createElement("div"); div.className = "suggestion-item"; div.textContent = displayExtractor(item);
+      div.onmousedown = function(e) { e.preventDefault(); input.value = displayExtractor(item); onSelectCallback(item); dropdown.style.display = "none"; };
+      dropdown.appendChild(div);
     });
-
-    suggestions.style.display = "block";
-
-
+    dropdown.style.display = "block";
   }
-
-  input.addEventListener("input", function () {
-
-    clearTimeout(debounceTimer);
-
-    if (inputId === "studioSearch") {
-
-      selectedStudio = null;
-
-      document.getElementById("mobile").value = "";
-
-    }
-
-    if (inputId === "serviceSearch")
-      selectedService = null;
-
-    debounceTimer = setTimeout(function () {
-
-      const keyword =
-        input.value.trim().toLowerCase();
-
-      if (!keyword) {
-
-        hideSuggestions();
-
-        return;
-
-      }
-
-      const exact = [];
-      const starts = [];
-      const contains = [];
-
-      items.forEach(item => {
-
-        const text =
-          searchFunction(item);
-
-        if (text === keyword) {
-
-          exact.push(item);
-
-        } else if (text.startsWith(keyword)) {
-
-          starts.push(item);
-
-        } else if (text.includes(keyword)) {
-
-          contains.push(item);
-
-        }
-
-      });
-
-      render(
-        [...exact, ...starts, ...contains],
-        keyword
-      );
-
-    }, 150);
-
+  input.addEventListener("focus", function() { showList(this.value); });
+  input.addEventListener("input", function() {
+    if(inputId==="studioSearch") selectedStudio=null; else if(inputId==="serviceSearch") { selectedService=null; calculateFinancials(); }
+    showList(this.value);
   });
-
-  input.addEventListener("keydown", function (e) {
-
-    const list =
-      suggestions.querySelectorAll(".suggestion-item");
-
-    if (!list.length)
-      return;
-
-    if (e.key === "ArrowDown") {
-
-      e.preventDefault();
-
-      activeSuggestionIndex++;
-
-      if (activeSuggestionIndex >= list.length)
-        activeSuggestionIndex = 0;
-
-    }
-
-    else if (e.key === "ArrowUp") {
-
-      e.preventDefault();
-
-      activeSuggestionIndex--;
-
-      if (activeSuggestionIndex < 0)
-        activeSuggestionIndex = list.length - 1;
-
-    }
-
-    else if (e.key === "Enter") {
-
-      if (activeSuggestionIndex >= 0) {
-
-        e.preventDefault();
-
-        list[activeSuggestionIndex].click();
-
-      }
-
-      return;
-
-    }
-
-    else if (e.key === "Escape") {
-
-      hideSuggestions();
-
-      return;
-
-    }
-
-    list.forEach(el =>
-      el.classList.remove("active")
-    );
-
-    if (activeSuggestionIndex >= 0) {
-
-      list[activeSuggestionIndex]
-        .classList.add("active");
-
-      list[activeSuggestionIndex]
-        .scrollIntoView({
-          block: "nearest"
-        });
-
-    }
-
-  });
-
-  input.addEventListener("blur", function () {
-
-    setTimeout(function () {
-
-      const value =
-        input.value.trim().toLowerCase();
-
-      const exactMatch =
-        items.find(item =>
-          displayFunction(item)
-            .toLowerCase() === value
-        );
-
-      if (exactMatch) {
-
-        selectFunction(exactMatch);
-
-        input.value =
-          displayFunction(exactMatch);
-
-      }
-
-      hideSuggestions();
-
-    }, 150);
-
-  });
-
+  input.addEventListener("blur", function() { setTimeout(() => dropdown.style.display = "none", 150); });
 }
 
-document.addEventListener(
+function toggleOneTimeCustomer() {
+  const isOneTime = document.getElementById("oneTimeCustomer").checked;
+  document.getElementById("studioSelectGroup").style.display = isOneTime ? "none" : "block";
+  document.getElementById("oneTimeGroup").style.display = isOneTime ? "block" : "none";
+  if(isOneTime) { selectedStudio=null; document.getElementById("studioSearch").value=""; document.getElementById("mobile").readOnly=false; }
+}
 
-  "click",
-
-  function (event) {
-
-    if (!event.target.closest(".search-box")) {
-
-      document
-        .querySelectorAll(".suggestions")
-        .forEach(function (box) {
-
-          box.style.display = "none";
-
-        });
-
-    }
-
+function calculateFinancials() {
+  const qtyInput = document.getElementById("quantity").value;
+  const advance = Number(document.getElementById("advancePaid").value) || 0;
+  let price = 0;
+  if (selectedService && selectedService.price) price = Number(selectedService.price);
+  
+  if (qtyInput === "") {
+    document.getElementById("amount").value = "";
+    document.getElementById("balance").value = advance > 0 ? -advance : "";
+  } else {
+    const amount = Number(qtyInput) * price;
+    document.getElementById("amount").value = amount;
+    document.getElementById("balance").value = amount - advance;
   }
-
-);
-
-function validateForm() {
-
-  const mobile =
-      document.getElementById("mobile").value.trim();
-
-  if (!mobile) {
-      alert("Please enter Mobile Number.");
-      return false;
-  }
-
-  if (!document.getElementById("bookingDate").value) {
-
-    alert("Booking Date is required.");
-
-    return false;
-
-  }
-
-  const oneTime = document.getElementById("oneTimeCustomer").checked;
-
-  if (!oneTime && !selectedStudio) {
-    alert("Please select a Studio.");
-    return false;
-  }
-
-  if (oneTime &&
-      !document.getElementById("oneTimeStudioName").value.trim()) {
-    alert("Please enter Customer / Studio Name.");
-    return false;
-  }
-
-
-  if (!selectedService) {
-
-    alert("Please select a Service.");
-
-    return false;
-
-  }
-
-
-  return true;
-
 }
 
 function saveBooking() {
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true; saveBtn.textContent = "Saving...";
 
-  if (!validateForm()) return;
-
-  const saveButton =
-    document.getElementById("saveBtn");
-
-  saveButton.disabled = true;
-
-  saveButton.textContent = "Saving...";
-
+  const isOneTime = document.getElementById("oneTimeCustomer").checked;
   const formData = {
-
-    row: editMode ? booking.row : null,
-
-    bookingNo: editMode ? booking.bookingNo : null,
-
-    bookingDate:
-      document.getElementById("bookingDate").value,
-
-    deliveryDate:
-      document.getElementById("deliveryDate").value,
-
-    studioId: document.getElementById("oneTimeCustomer").checked
-      ? ""
-      : selectedStudio.id,
-
-    studioName: document.getElementById("oneTimeCustomer").checked
-      ? document.getElementById("oneTimeStudioName").value.trim()
-      : (selectedStudio.displayName || selectedStudio.name),
-
-    mobileNumber:
-      document.getElementById("mobile").value.trim(),
-
-    jobTitle:
-      document.getElementById("jobTitle").value.trim(),
-
-    serviceId:
-      selectedService.id,
-
-    songPreference:
-      document.getElementById("songPreference").value,
-
-    effects:
-      document.getElementById("effects").value,
-
-    droneFootage:
-      document.getElementById("drone").checked,
-
-    pendrive:
-      document.getElementById("pendrive").checked,
-
-    hardDisk:
-      document.getElementById("harddisk").checked,
-
-    memoryCard:
-      document.getElementById("memorycard").checked,
-
-    advancePaid:
-      Number(
-        document.getElementById("advancePaid").value
-      ) || 0,
-
-    remarks:
-      document.getElementById("remarks").value.trim()
-
+    row: (IS_EDIT && BOOKING_DATA) ? BOOKING_DATA.row : null,
+    bookingNo: (IS_EDIT && BOOKING_DATA) ? BOOKING_DATA.bookingNo : null,
+    bookingDate: document.getElementById("bookingDate").value,
+    deliveryDate: document.getElementById("deliveryDate").value,
+    studioId: isOneTime ? "" : (selectedStudio ? selectedStudio.id : ""),
+    studioName: isOneTime ? document.getElementById("oneTimeStudioName").value : (selectedStudio ? selectedStudio.name : ""),
+    mobileNumber: document.getElementById("mobile").value.trim(),
+    jobTitle: document.getElementById("jobTitle").value.trim(),
+    serviceId: selectedService ? selectedService.id : "",
+    serviceName: selectedService ? selectedService.name : "",
+    songPreference: document.getElementById("songPreference").value,
+    effects: document.getElementById("effects").value,
+    droneFootage: document.getElementById("drone").checked,
+    pendrive: document.getElementById("pendrive").checked,
+    hardDisk: document.getElementById("harddisk").checked,
+    memoryCard: document.getElementById("memorycard").checked,
+    
+    status: document.getElementById("status").value,
+    assignedMixer: document.getElementById("assignedMixer").value,
+    quantity: document.getElementById("quantity").value, 
+    advancePaid: document.getElementById("advancePaid").value,
+    qc: document.getElementById("qc").value,
+    remarks: document.getElementById("remarks").value.trim()
   };
 
-  
-
-    const runner = google.script.run
-
-        .withSuccessHandler(function(result) {
-
-            alert(
-                editMode
-                    ? "Booking updated successfully."
-                    : `Booking #${result.bookingNo} saved successfully.`
-            );
-
-            google.script.host.close();
-
-        })
-
-        .withFailureHandler(function(error) {
-
-            saveButton.disabled = false;
-
-            saveButton.textContent = "Save Booking";
-
-            showError(error);
-
-        });
-
-    if (editMode) {
-
-        runner.updateBooking(formData);
-
-    } else {
-
-        runner.submitBooking(formData);
-
-    }
-
-}
-
-function showError(error) {
-
-  const message =
-    error && error.message
-      ? error.message
-      : String(error);
-
-  alert(message);
-
-}
-document.querySelectorAll('input[type="text"], textarea').forEach(function(el) {
-
-  el.addEventListener("input", function() {
-
-    const start = this.selectionStart;
-    const end = this.selectionEnd;
-
-    this.value = this.value.toUpperCase();
-
-    this.setSelectionRange(start, end);
-
+  const runner = google.script.run.withSuccessHandler(result => {
+    alert(IS_EDIT ? "Booking updated successfully." : ("Booking #" + result.bookingNo + " saved."));
+    google.script.host.close();
+  }).withFailureHandler(err => {
+    saveBtn.disabled = false; saveBtn.textContent = IS_EDIT ? "Update Booking" : "Save Booking";
+    alert(err.message || err);
   });
 
-});
-
-function toggleOneTimeCustomer() {
-
-    const checked =
-        document.getElementById("oneTimeCustomer").checked;
-
-    const studioSearch =
-        document.getElementById("studioSearch");
-
-    const mobile =
-        document.getElementById("mobile");
-
-    const label =
-        document.getElementById("studioLabel");
-
-    studioSearch.disabled = checked;
-
-    document.getElementById("studioSuggestions").style.display = "none";
-
-    document.getElementById("oneTimeDiv").style.display =
-        checked ? "block" : "none";
-
-    if (checked) {
-
-        label.textContent = "Customer / Studio";
-
-        selectedStudio = null;
-
-        studioSearch.value = "";
-
-        mobile.readOnly = false;
-        mobile.value = "";
-        mobile.focus();
-
-    } else {
-
-        label.textContent = "Studio";
-
-        document.getElementById("oneTimeStudioName").value = "";
-
-        mobile.readOnly = true;
-        mobile.value = "";
-
-    }
-
+  if (IS_EDIT) {
+    runner.updateBooking(formData);
+  } else {
+    runner.submitBooking(formData);
+  }
 }
 
+function showError(err) { alert(err.message || err); }
 </script>
-
 </body>
-
 </html>
