@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Styles'); ?>
+  <style>
+    body { background-color: #f8fafc; padding: 20px; font-family: sans-serif; }
+    .card { background: #ffffff; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .section-title { color: #1e293b; font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #EFF6FF; padding-bottom: 8px; }
+    
+    /* Search Bar Styles */
+    .search-container { position: relative; width: 100%; margin-bottom: 20px; }
+    .search-input { width: 100%; padding: 12px 15px; border: 2px solid #BFDBFE; border-radius: 8px; font-size: 15px; outline: none; transition: border 0.2s; }
+    .search-input:focus { border-color: #2563EB; }
+    .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 9999; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.12); }
+    .suggestion-item { padding: 12px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f3f4f6; }
+    .suggestion-item:hover { background-color: #EFF6FF; color: #1e3a8a; font-weight: bold; }
+    
+    /* Financial Metric Grid */
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; display: none; }
+    .metric-box { padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e5e7eb; }
+    .metric-title { font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .metric-value { font-size: 24px; font-weight: bold; color: #0f172a; }
+    
+    /* Specific Box Colors */
+    .box-jobs { background: #F8FAFC; }
+    .box-amount { background: #EFF6FF; border-color: #BFDBFE; }
+    .box-advance { background: #F0FDF4; border-color: #BBF7D0; color: #166534; }
+    .box-balance { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+
+    #loadingText { color: #2563EB; font-weight: bold; display: none; text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="section-title">🏢 Studio Ledger Search</div>
+  
+  <div class="search-container">
+    <input type="text" id="studioSearch" class="search-input" placeholder="🔍 Type a Studio Name to view financials..." autocomplete="off">
+    <div id="studioSuggestions" class="suggestions"></div>
+  </div>
+
+  <div id="loadingText">Calculating financials... ⏳</div>
+
+  <div class="metric-grid" id="metricsContainer">
+    <div class="metric-box box-jobs">
+      <div class="metric-title">Total Jobs</div>
+      <div class="metric-value" id="valJobs">0</div>
+    </div>
+    <div class="metric-box box-amount">
+      <div class="metric-title">Total Amount</div>
+      <div class="metric-value" id="valAmount">₹0</div>
+    </div>
+    <div class="metric-box box-advance">
+      <div class="metric-title">Total Advance Paid</div>
+      <div class="metric-value" id="valAdvance" style="color: inherit;">₹0</div>
+    </div>
+    <div class="metric-box box-balance">
+      <div class="metric-title">Total Balance Due</div>
+      <div class="metric-value" id="valBalance" style="color: inherit;">₹0</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let studios = [];
+
+window.onload = function () {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      studios = data.studios || [];
+      setupAutocomplete();
+    })
+    .getDashboardInitData();
+};
+
+function setupAutocomplete() {
+  const input = document.getElementById("studioSearch");
+  const dropdown = document.getElementById("studioSuggestions");
+
+  input.addEventListener("input", function() {
+    dropdown.innerHTML = "";
+    const keyword = this.value.trim().toLowerCase();
+    
+    if (!keyword) {
+      dropdown.style.display = "none";
+      document.getElementById("metricsContainer").style.display = "none";
+      return;
+    }
+
+    const filtered = studios.filter(s => 
+      ((s.name || "") + " " + (s.displayName || "") + " " + (s.mobile || "")).toLowerCase().includes(keyword)
+    );
+
+    if (filtered.length === 0) {
+      dropdown.innerHTML = '<div class="suggestion-item">No studios found</div>';
+    } else {
+      filtered.forEach(item => {
+        const div = document.createElement("div"); 
+        div.className = "suggestion-item"; 
+        div.textContent = item.displayName || item.name;
+        
+        div.onmousedown = function(e) { 
+          e.preventDefault(); 
+          input.value = item.name; 
+          dropdown.style.display = "none";
+          fetchStudioData(item.id); // Trigger calculation
+        };
+        dropdown.appendChild(div);
+      });
+    }
+    dropdown.style.display = "block";
+  });
+
+  input.addEventListener("blur", () => setTimeout(() => dropdown.style.display = "none", 150));
+}
+
+function fetchStudioData(studioId) {
+  document.getElementById("metricsContainer").style.display = "none";
+  document.getElementById("loadingText").style.display = "block";
+
+  google.script.run
+    .withSuccessHandler(function(stats) {
+      document.getElementById("loadingText").style.display = "none";
+      
+      // Update UI with calculated numbers
+      document.getElementById("valJobs").textContent = stats.jobCount;
+      document.getElementById("valAmount").textContent = "₹" + stats.totalAmount.toLocaleString('en-IN');
+      document.getElementById("valAdvance").textContent = "₹" + stats.totalAdvance.toLocaleString('en-IN');
+      document.getElementById("valBalance").textContent = "₹" + stats.totalBalance.toLocaleString('en-IN');
+      
+      document.getElementById("metricsContainer").style.display = "grid";
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById("loadingText").style.display = "none";
+      alert(err.message || err);
+    })
+    .getStudioFinancials(studioId);
+}
+</script>
+
+</body>
+</html>

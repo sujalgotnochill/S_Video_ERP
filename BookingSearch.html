@@ -1,183 +1,136 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<base target="_top">
-<?!= include("Styles"); ?>
+  <base target="_top">
+  <?!= include('Styles'); ?>
+  <style>
+    body { background-color: #f8fafc; padding: 20px; font-family: sans-serif; }
+    .card { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .section-title { color: #1e293b; font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #EFF6FF; padding-bottom: 8px; }
+    
+    /* Search Bar */
+    .search-input { width: 100%; padding: 12px 15px; border: 2px solid #BFDBFE; border-radius: 8px; font-size: 15px; outline: none; margin-bottom: 20px; transition: 0.2s; }
+    .search-input:focus { border-color: #2563EB; }
+    
+    /* Table Styles */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+    th { background-color: #EFF6FF; color: #1e3a8a; padding: 12px; border-bottom: 2px solid #BFDBFE; font-weight: bold; }
+    td { padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151; vertical-align: middle; }
+    tr:hover { background-color: #f8fafc; }
+    
+    /* Status Badges */
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
+    .status-pending { background: #FEF3C7; color: #92400E; }
+    .status-progress { background: #DBEAFE; color: #1E40AF; }
+    .status-completed { background: #D1FAE5; color: #065F46; }
+    .status-delivered { background: #F3F4F6; color: #374151; }
 
-<style>
-body {
-    padding: 20px;
-    font-family: Arial, sans-serif;
-    background: #f5f7fb;
-}
+    /* Edit Button */
+    .btn-edit { background: #2563EB; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+    .btn-edit:hover { background: #1D4ED8; box-shadow: 0 2px 4px rgba(37,99,235,0.3); }
 
-.toolbar {
-    margin-bottom: 20px;
-}
-
-.toolbar input {
-    width: 100%;
-    padding: 12px;
-    font-size: 15px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-}
-
-th {
-    background: #2563eb;
-    color: #fff;
-    padding: 12px;
-    text-align: left;
-}
-
-td {
-    padding: 10px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-tr:hover {
-    background: #f8fafc;
-}
-
-.status {
-    padding: 4px 10px;
-    border-radius: 15px;
-    font-size: 12px;
-    font-weight: bold;
-    display: inline-block;
-}
-
-.status-pending {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-.status-completed {
-    background: #D1FAE5;
-    color: #065F46;
-}
-
-.status-default {
-    background: #E5E7EB;
-    color: #374151;
-}
-
-.edit-btn {
-    background: #2563EB;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.edit-btn:hover {
-    background: #1D4ED8;
-}
-</style>
+    #loading { text-align: center; color: #2563EB; font-weight: bold; display: none; padding: 20px; }
+    .empty-state { text-align: center; color: #6b7280; padding: 30px; font-style: italic; }
+  </style>
 </head>
-
 <body>
 
-<h2>Booking Search</h2>
-
-<div class="toolbar">
-  <input type="text" id="searchBox" placeholder="Search Booking No, Studio, Mobile, Job Title...">
+<div class="card">
+  <div class="section-title">🔍 Search Bookings</div>
+  <input type="text" id="searchInput" class="search-input" placeholder="Search by Studio Name, City, Mobile, or Booking No..." oninput="triggerSearch()">
+  
+  <div id="loading">Searching... ⏳</div>
+  
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Booking #</th>
+          <th>Date</th>
+          <th>Studio / Customer</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <!-- Results inject here -->
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<table>
-<thead>
-<tr>
-  <th>Booking No</th>
-  <th>Booking Date</th>
-  <th>Delivery</th>
-  <th>Studio</th>
-  <th>Mobile</th>
-  <th>Job</th>
-  <th>Service</th>
-  <th>Status</th>
-  <th>Edit</th>
-</tr>
-</thead>
-
-<tbody id="bookingTable">
-  <tr>
-    <td colspan="9" style="text-align:center;">Loading...</td>
-  </tr>
-</tbody>
-</table>
-
 <script>
-let searchDebounceTimer = null;
+let searchTimeout = null;
 
-window.onload = function () {
-    loadBookings("");
-
-    document.getElementById("searchBox").addEventListener("input", function () {
-        clearTimeout(searchDebounceTimer);
-        const val = this.value;
-        searchDebounceTimer = setTimeout(function () {
-            loadBookings(val);
-        }, 200);
-    });
+// Load initial recent bookings on open
+window.onload = function() {
+  triggerSearch();
 };
 
-function loadBookings(keyword) {
+function triggerSearch() {
+  const query = document.getElementById("searchInput").value;
+  
+  // Debounce: Wait 300ms after user stops typing before searching
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("resultsBody").innerHTML = "";
+    
     google.script.run
-        .withSuccessHandler(function(result){
-            renderBookings(result || []);
-        })
-        .withFailureHandler(function(err){
-            alert(err.message || err);
-        })
-        .searchBookingRecords(keyword);
+      .withSuccessHandler(renderResults)
+      .withFailureHandler(err => { alert(err.message); document.getElementById("loading").style.display = "none"; })
+      .searchBookings(query);
+  }, 300);
 }
 
-function renderBookings(bookings) {
-    const tbody = document.getElementById("bookingTable");
-    tbody.innerHTML = "";
+function renderResults(results) {
+  document.getElementById("loading").style.display = "none";
+  const tbody = document.getElementById("resultsBody");
+  tbody.innerHTML = "";
 
-    if (!bookings.length) {
-        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>No bookings found.</td></tr>";
-        return;
-    }
+  if (results.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No matching bookings found.</td></tr>`;
+    return;
+  }
 
-    bookings.forEach(function(booking){
-        const tr = document.createElement("tr");
-        const statusText = booking.status || "Pending";
-        let statusClass = "status-default";
+  results.forEach(b => {
+    const tr = document.createElement("tr");
+    
+    // Status Badge Logic
+    let statusClass = "status-pending";
+    if (b.status === "In Progress") statusClass = "status-progress";
+    if (b.status === "Completed") statusClass = "status-completed";
+    if (b.status === "Delivered") statusClass = "status-delivered";
 
-        if (statusText.toLowerCase() === "pending") statusClass = "status-pending";
-        if (statusText.toLowerCase() === "completed") statusClass = "status-completed";
+    // Format the city display
+    const cityHtml = b.city ? `<br><span style="font-size: 11px; color: #6b7280;">📍 ${b.city}</span>` : "";
 
-        tr.innerHTML = `
-            <td>${booking.bookingNo}</td>
-            <td>${booking.bookingDate || ""}</td>
-            <td>${booking.deliveryDate || ""}</td>
-            <td>${booking.studioName || ""}</td>
-            <td>${booking.mobileNumber || ""}</td>
-            <td>${booking.jobTitle || ""}</td>
-            <td>${booking.serviceName || ""}</td>
-            <td><span class="status ${statusClass}">${statusText}</span></td>
-            <td>
-                <button class="edit-btn" onclick="editBooking('${booking.bookingNo}')">
-                    Edit
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+    tr.innerHTML = `
+      <td><strong>${b.bookingNo}</strong></td>
+      <td>${b.date}</td>
+      <td>
+        <strong>${b.studioName}</strong>
+        ${cityHtml}
+      </td>
+      <td>${b.service}</td>
+      <td><span class="status-badge ${statusClass}">${b.status || "Pending"}</span></td>
+      <td>
+        <button class="btn-edit" onclick="editBooking('${b.bookingNo}')">✏️ Edit</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
-function editBooking(bookingNo){
-    google.script.run.showEditBookingDialog(bookingNo);
+function editBooking(bookingNo) {
+  // Show a loading state on the button
+  event.target.textContent = "Loading...";
+  event.target.disabled = true;
+  
+  google.script.run
+    .withFailureHandler(err => alert("Error opening booking: " + err.message))
+    .openEditBookingDialog(bookingNo);
 }
 </script>
 

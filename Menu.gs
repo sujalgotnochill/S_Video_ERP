@@ -11,6 +11,7 @@ function onOpen() {
     .addItem("➕ New Studio", "showNewStudioDialog")
     .addItem("📋 New Booking", "showNewBookingDialog")
     .addItem("🔍 Booking Search", "showBookingSearchDialog")
+    .addItem("📊 Dashboard", "showDashboardDialog")
     .addToUi();
 }
 
@@ -23,6 +24,13 @@ function showNewStudioDialog() {
 
   SpreadsheetApp.getUi()
     .showModalDialog(html, "New Studio");
+}
+
+function showDashboardDialog() {
+  const html = HtmlService.createTemplateFromFile("Dashboard_Page").evaluate()
+    .setWidth(700)
+    .setHeight(550);
+  SpreadsheetApp.getUi().showModalDialog(html, "📊 ERP Dashboard");
 }
 
 function showBookingSearchDialog() {
